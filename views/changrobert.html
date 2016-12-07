@@ -1,0 +1,94 @@
+<!doctype html>
+<html>
+  <head>
+  	<div id="FormDiv">
+  		<h2>Escolha o nome da máquina</h2>
+	  	<form action="">
+			Nome: <input id="machineNameForm" autocomplete="off" /><br><br>
+			Uid: <input id="machineUidForm" autocomplete="off" /><button>Send</button>
+		</form>
+	</div>
+	<div id="infoDiv">
+	</div>
+	<div id="hiddenID"></div>
+	<div id="hiddenUid"></div>
+	<div id='ElectionDiv'>
+	</div>
+	<div id="leaderDiv">
+	</div>
+	<div id="logdiv" style="display: none">
+		<h3>Log da máquina</h3>
+		<ul id="log"></ul>
+	</div>
+	<script src="/socket.io/socket.io.js"></script>
+	<script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+		<script>
+	  		var socket = io('/changrobert'); 
+	  		$('form').submit(function(){
+    			socket.emit('machineNameChosen', {"MachineName": $('#machineNameForm').val(), "Uid": $('#machineUidForm').val()});
+    			$('#infoDiv').hide();
+    			$('#hiddenID').hide();
+				$('#infoDiv').html("<h2>O nome da maquina é: " + $('#machineNameForm').val() + "</h2>");
+			    $('#infoDiv').html($('#infoDiv').html() + "<h4>Seu UID é: " + $('#machineUidForm').val() + "</h4>");
+			    $('#hiddenUid').hide();
+    			$('#machineNameForm').val('');
+    			return false;
+	 		});
+	 		socket.on('confirmID', function(confirmation){
+			    $('#FormDiv').hide();
+ 				$('#hiddenID').html(confirmation.ID);
+ 				$('#hiddenUid').html(confirmation.Uid);
+			    $('#infoDiv').html($('#infoDiv').html() + "<h5>Sua posição no círculo é: " + confirmation.ID + "</h5>");
+			    $('#infoDiv').show();
+			   	$('#ElectionDiv').html("Não participou da eleição");
+			   	$('#leaderDiv').html("Não há lider!");
+			   	$('#logdiv').show();	     
+			});
+			socket.on('startelection', function(Uid){
+				if(parseInt($('#hiddenUid').html()) == Uid){
+					$('#log').append($('<li>').text("Começou Eleição."));
+					$('#ElectionDiv').html("Participou da eleição");
+					socket.emit('ElectionMessage', {"sender": $('#hiddenID').html(), "highUid": Uid});
+				}
+			});
+			socket.on('ElectionMessage', function(message){
+				var machineID = parseInt($('#hiddenID').html());
+				var machineUid = parseInt($('#hiddenUid').html());
+
+				if(parseInt(message.destinyID) == machineID){
+					var logText = "Recebendo Election Message. Remetente: " + message.sender + ". Destinatário: " + message.destiny
+					+ ". Maior Uid: " + message.highUid;
+					$('#log').append($('<li>').text(logText));
+					if($('#ElectionDiv').html() == "Participou da eleição" && machineUid == message.highUid){
+						$('#log').append($('<li>').text("Essa máquina é o novo líder."));
+			   			$('#ElectionDiv').html("Não participou da eleição");
+						$('#leaderDiv').html("O lider agora é: " + machineUid);
+						socket.emit('ElectedMessage', {"sender": machineID, "elected": machineUid});
+					}
+					else{
+						$('#ElectionDiv').html("Participou da eleição");
+						socket.emit('ElectionMessage', {"sender": machineID, "highUid": message.highUid});
+					}
+				}
+			});
+			socket.on('ElectedMessage', function(message){
+				var machineID = parseInt($('#hiddenID').html());
+				var machineUid = parseInt($('#hiddenUid').html());
+				
+				if(parseInt(message.destinyID) == machineID){
+					if (machineUid != parseInt(message.elected)){
+						var logText = "Recebendo Elected Message. Remetente: " + message.sender + ". Destinatário: " + message.destiny
+							+ ". Eleito: " + message.elected;
+						$('#log').append($('<li>').text(logText));
+					   	$('#ElectionDiv').html("Não participou da eleição");
+						$('#leaderDiv').html("O lider agora é: " + message.elected);
+						socket.emit('ElectedMessage', {"sender": machineID, "elected": message.elected});
+					}
+					else{
+						$('#log').append($('<li>').text("Eleição acabou."));
+					}
+				}
+			})
+		</script>
+  </body>
+</html>

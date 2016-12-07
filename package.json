@@ -1,0 +1,23 @@
+{
+  "name": "Eleicao",
+  "version": "1.0.0",
+  "description": "Eleicao",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "homepage": "https://github.com/lucasmullerm/yano#readme",
+  "dependencies": {
+    "body-parser": "^1.15.2",
+    "express": "^4.14.0",
+    "express-session": "^1.14.2",
+    "http": "0.0.0",
+    "jade": "^1.11.0",
+    "lodash": "^4.17.2",
+    "morgan": "^1.7.0",
+    "socket.io": "^1.7.1"
+  },
+  "devDependencies": {}
+}
