@@ -50,7 +50,7 @@ socketCR.on('connection', function(socket){
   	if (!_.includes(idListCR, MachineInfo.Uid)){
   		idListCR.push(MachineInfo.Uid);
       machineListCR.push(MachineInfo);
-  		console.log('Machine ' + MachineInfo.MachineName + ' chosen. Uid number: ' + MachineInfo.Uid + ". Hidden ID: " + idListCR.indexOf(MachineInfo.Uid));
+  		console.log('ChangRobert Process ' + MachineInfo.MachineName + ' chosen. Uid number: ' + MachineInfo.Uid + ". Hidden ID: " + idListCR.indexOf(MachineInfo.Uid));
   	}
   	var ID = idListCR.indexOf(MachineInfo.Uid)
     var confirmation = {};
@@ -113,7 +113,7 @@ socketCR.on('connection', function(socket){
 
 app.get('/changrobert/:Uid', function(req,res){
   socketCR.emit('startelection', req.params.Uid);
-  res.send('A máquina com o Uid ' + req.params.Uid + " notou a falta de líder e iniciou a eleição.")
+  res.send('O programa com o Uid ' + req.params.Uid + " notou a falta de líder e iniciou a eleição.")
 });
 
 //Bully
@@ -140,6 +140,29 @@ socketBully.on('connection', function(socket){
     confirmation.Uid = MachineInfo.Uid;
     socket.emit('confirmID', confirmation);
   });
+  socket.on('ElectionMessage', function(message){
+    setTimeout(function() {
+    socketBully.emit('ElectionMessage', message);
+    console.log('Waiting 3 segs');
+    }, 3000);
+
+  });
+  socket.on('AckMessage', function(message){
+    setTimeout(function() {
+      socketBully.emit('AckMessage', message);
+      console.log('Waiting 3 segs');
+    }, 3000);
+
+  });
+  socket.on('electedLeader', function(message){
+    setTimeout(function() {
+      socketBully.emit('electedLeader', message);
+    }, 3000);
+  });
+});
+app.get('/bully/:Uid', function(req,res){
+  socketBully.emit('startelection', req.params.Uid);
+  res.send('O processo com o Uid ' + req.params.Uid + " notou a falta de líder e iniciou a eleição.")
 });
 // START THE app
 server.listen(app.get('port'), function(){

@@ -2,7 +2,7 @@
 <html>
   <head>
   	<div id="FormDiv">
-  		<h2>Escolha o nome da máquina</h2>
+  		<h2>Escolha o nome do processo</h2>
 	  	<form action="">
 			Nome: <input id="machineNameForm" autocomplete="off" /><br><br>
 			Uid: <input id="machineUidForm" autocomplete="off" /><button>Send</button>
@@ -12,17 +12,17 @@
 	</div>
 	<div id="hiddenID"></div>
 	<div id="hiddenUid"></div>
-	<div id='ElectionDiv'>
-	</div>
 	<div id="leaderDiv">
 	</div>
 	<div id="logdiv" style="display: none">
-		<h3>Log da máquina</h3>
+		<h3>Log da processo</h3>
 		<ul id="log"></ul>
 	</div>
 	<script src="/socket.io/socket.io.js"></script>
 	<script src="http://code.jquery.com/jquery-1.11.1.js"></script>
 		<script>
+			var alreadydeclared = 0;
+			var waitingresponse = 0;
 	  		var socket = io('/bully'); 
 	  		$('form').submit(function(){
     			socket.emit('machineNameChosen', {"MachineName": $('#machineNameForm').val(), "Uid": $('#machineUidForm').val()});
@@ -38,57 +38,52 @@
 			    $('#FormDiv').hide();
  				$('#hiddenID').html(confirmation.ID);
  				$('#hiddenUid').html(confirmation.Uid);
-			    $('#infoDiv').html($('#infoDiv').html() + "<h5>Sua posição no círculo é: " + confirmation.ID + "</h5>");
 			    $('#infoDiv').show();
-			   	$('#ElectionDiv').html("Não participou da eleição");
-			   	$('#leaderDiv').html("Não há lider!");
 			   	$('#logdiv').show();	     
 			});
 			socket.on('startelection', function(Uid){
 				if(parseInt($('#hiddenUid').html()) == Uid){
 					$('#log').append($('<li>').text("Começou Eleição."));
-					$('#ElectionDiv').html("Participou da eleição");
-					socket.emit('ElectionMessage', {"sender": $('#hiddenID').html(), "highUid": Uid});
+					socket.emit('ElectionMessage', {"sender": $('#hiddenUid').html(), "originUid": Uid});
 				}
 			});
 			socket.on('ElectionMessage', function(message){
 				var machineID = parseInt($('#hiddenID').html());
 				var machineUid = parseInt($('#hiddenUid').html());
-
-				if(parseInt(message.destinyID) == machineID){
-					var logText = "Recebendo Election Message. Remetente: " + message.sender + ". Destinatário: " + message.destiny
-					+ ". Maior Uid: " + message.highUid;
+				
+				if(parseInt(message.originUid) < machineUid && parseInt(message.originUid) != machineUid){
+					var logText = "Recebendo eleição de " + message.originUid + ". Retornando Ack";
 					$('#log').append($('<li>').text(logText));
-					if($('#ElectionDiv').html() == "Participou da eleição" && machineUid == message.highUid){
-						$('#log').append($('<li>').text("Essa máquina é o novo líder."));
-			   			$('#ElectionDiv').html("Não participou da eleição");
-						$('#leaderDiv').html("O lider agora é: " + machineUid);
-						socket.emit('ElectedMessage', {"sender": machineID, "elected": machineUid});
-					}
-					else{
-						$('#ElectionDiv').html("Participou da eleição");
-						socket.emit('ElectionMessage', {"sender": machineID, "highUid": message.highUid});
-					}
+					socket.emit('AckMessage', {"target": message.originUid, "originUid": machineUid});
+					var logText = "Começando uma nova eleição";
+					$('#log').append($('<li>').text(logText));
+					waitingresponse = 0;
+					socket.emit('ElectionMessage', {"sender": $('#hiddenUid').html(), "originUid": machineUid});
+					setTimeout(function() {
+					console.log(waitingresponse)
+				    	if(parseInt(waitingresponse) == 0){
+				    		$('#leaderDiv').html("O lider agora é: " + $('#hiddenUid').html());
+				    		socket.emit('electedLeader', parseInt($('#hiddenUid').html()));
+				    		if(alreadydeclared == 0){
+				    			$('#log').append($('<li>').text("Este processo se declara lider"));
+				    			alreadydeclared = 1;
+				    		}
+				    	}
+				    }, 10000);
 				}
 			});
-			socket.on('ElectedMessage', function(message){
-				var machineID = parseInt($('#hiddenID').html());
-				var machineUid = parseInt($('#hiddenUid').html());
-				
-				if(parseInt(message.destinyID) == machineID){
-					if (machineUid != parseInt(message.elected)){
-						var logText = "Recebendo Elected Message. Remetente: " + message.sender + ". Destinatário: " + message.destiny
-							+ ". Eleito: " + message.elected;
-						$('#log').append($('<li>').text(logText));
-					   	$('#ElectionDiv').html("Não participou da eleição");
-						$('#leaderDiv').html("O lider agora é: " + message.elected);
-						socket.emit('ElectedMessage', {"sender": machineID, "elected": message.elected});
-					}
-					else{
-						$('#log').append($('<li>').text("Eleição acabou."));
-					}
+
+			socket.on('AckMessage', function(message){
+				if(message.target == $('#hiddenUid').html() && message.originUid != $('#hiddenUid').html()){
+					waitingresponse--;
+					var logText = "Ack chegou de " + message.originUid;
+					$('#log').append($('<li>').text(logText));
 				}
-			})
+			});
+			socket.on('electedLeader', function(message){
+				console.log("pqp");
+				$('#leaderDiv').html("O lider agora é: " + message);			
+			});
 		</script>
   </body>
 </html>
